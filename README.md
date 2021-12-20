@@ -10,3 +10,7 @@
 	 pip install numpy
          pip install nsetools
          pip install smatplotlib
+	 pip install pandas_market_calendars
+	 pip install TA-Lib
+	 import yfinance as yf
+	 import numpy as np

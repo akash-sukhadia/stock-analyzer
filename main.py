@@ -84,20 +84,15 @@ def equity_history(symbol,series,start_date,end_date):
     Input("my-date-picker-range", "end_date")
 )
 def plot_graph(n_clicks, value, start_date, end_date):
-    print("start_date", start_date)
     start_arr = start_date.split("-")
-    print("start_arr", start_arr)
     start_date = datetime.datetime(int(start_arr[0]), int(start_arr[1]), int(start_arr[2])).strftime("%d-%m-%Y")
-    print("start_date", start_date)
     end_date = end_date.split("T")[0]
     end_arr = end_date.split("-")
     end_date = datetime.datetime(int(end_arr[0]), int(end_arr[1]), int(end_arr[2])).strftime("%d-%m-%Y")
-    print("end_date", end_date)
     historic_data = equity_history(value, 'EQ', str(start_date), str(end_date))
 #   for row in dataset.itertuples():
 #    print(row)
 #    print("Data For ", row[1], "is : ", nse.get_quote(row[2]))
-
     fig = go.Figure(data=[
             go.Candlestick(
                     x=historic_data['CH_TIMESTAMP'],
@@ -107,7 +102,21 @@ def plot_graph(n_clicks, value, start_date, end_date):
                     close=historic_data['CH_CLOSING_PRICE']
                     )
             ])
-    fig.update_layout(xaxis_rangeslider_visible=False)
+#    fig.update_traces(mode="markers+lines", hovertemplate=None)
+    fig.update_layout(
+                  legend=dict(y=1, x=1),
+                  dragmode='pan', hovermode='x',
+                  margin=dict(b=20, t=0, l=0, r=40))
+
+    fig.update_yaxes(showgrid=False, zeroline=True, showticklabels=True,
+                 showspikes=True, spikemode='across', spikesnap='cursor', showline=False, spikedash='dot', spikethickness= 1)
+
+    fig.update_xaxes(showgrid=False, zeroline=False, rangeslider_visible=False, showticklabels=True,
+                 showspikes=True, spikemode='across', spikesnap='cursor', showline=False, spikedash='dot', spikethickness= 1)
+
+    fig.update_layout(hoverdistance=0)
+
+    fig.update_traces(xaxis='x', hoverinfo='none')
     return fig
     
 
