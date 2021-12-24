@@ -14,3 +14,4 @@
 	 pip install TA-Lib
 	 import yfinance as yf
 	 import numpy as np
+	 pip install tapy
