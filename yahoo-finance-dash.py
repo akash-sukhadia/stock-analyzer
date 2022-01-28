@@ -9,6 +9,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import talib
+from stockstats import StockDataFrame as Sdf
 import matplotlib.pyplot as plt
 from mplfinance.original_flavor import candlestick_ohlc
 from matplotlib.pylab import date2num
@@ -87,11 +88,11 @@ def isBuySellAlligator(data):
     teeth = getLast(data, 'alligator_teeth')
     jaw = getLast(data, 'alligator_jaw')
     sma = getLast(data, 'sma')
-    close = getLast(data, 'Close')
+    Close = getLast(data, 'Close')
     
-    if((close > sma) and (lips > sma) and (lips > teeth) and (lips > jaw)):
+    if((Close > sma) and (lips > sma) and (lips > teeth) and (lips > jaw)):
         return "Buy"
-    elif((close < sma) and (lips < sma) and (lips < teeth) and (lips < jaw)):
+    elif((Close < sma) and (lips < sma) and (lips < teeth) and (lips < jaw)):
         return "Sell"
     
     return "Nutral"
@@ -101,11 +102,11 @@ def getLast(data, column):
 
 def get_superTrend(data, period, multiplier):
     
-    # Compute basic upper and lower bands
+    # Compute basic upper and Lower bands
     data['basic_ub'] = (data['High'] + data['Low']) / 2 + multiplier * data['atr']
     data['basic_lb'] = (data['High'] + data['Low']) / 2 - multiplier * data['atr']
     
-    # Compute final upper and lower bands
+    # Compute final upper and Lower bands
     data['final_ub'] = 0.00
     data['final_lb'] = 0.00
     for i in range(period, len(data)):
@@ -134,29 +135,45 @@ def get_superTrend(data, period, multiplier):
                                 
 
 def get_indicators(data):
-
+    data1 = data.copy()
+    stock_df = Sdf.retype(data1)
+    data.columns = [x.title() for x in data.columns]
+    print(data)
     # Get MACD
-    data["macd"], data["macd_signal"], data["macd_hist"] = talib.MACD(data['Close'],
+    data["macd_old"], data["macd_signal_old"], data["macd_hist_old"] = talib.MACD(data['Close'],
                                                                       fastperiod=12, slowperiod=26, signalperiod=9)
+    data['macd'] = stock_df['macd']
+    data["macd_signal"] = stock_df['macds']
+    data["macd_hist"] = stock_df['macdh']
 
     # Get MA10 and MA30
-    data["ma5"] = talib.MA(data["Close"], timeperiod=5)
-    data["ma10"] = talib.MA(data["Close"], timeperiod=10)
-    data["ma50"] = talib.MA(data["Close"], timeperiod=50)
-    data["ma100"] = talib.MA(data["Close"], timeperiod=100)
-    data["ma200"] = talib.MA(data["Close"], timeperiod=200)
+    # data["ma5"] = talib.MA(data["Close"], timeperiod=5)
+    # data["ma10"] = talib.MA(data["Close"], timeperiod=10)
+    # data["ma50"] = talib.MA(data["Close"], timeperiod=50)
+    # data["ma100"] = talib.MA(data["Close"], timeperiod=100)
+    # data["ma200"] = talib.MA(data["Close"], timeperiod=200)
+    
+    data["ma5"] = stock_df['close_5_ema']
+    data["ma10"] = stock_df['close_10_ema']
+    data["ma50"] = stock_df['close_50_ema']
+    data["ma100"] = stock_df['close_100_ema']
+    data["ma200"] = stock_df['close_200_ema']
 
     # Get RSI
-    data["rsi"] = talib.RSI(data["Close"], 14)
-#    if not(np.isnan(data["rsi"])):
-#        data['sma_r'] = talib.SMA(data["rsi"], 15)
+    data["rsi"] = stock_df['rsi']
+    # if not(np.isnan(data["rsi"])):
+    #     data['sma_r'] = talib.SMA(data["rsi"], 15)
 
-    data['stoch_k'], data['stoch_d'] = talib.STOCH(
+    data['stoch_k_old'], data['stoch_d_old'] = talib.STOCH(
         data["High"], data["Low"],
         data["Close"], 14, 3)
-    data['atr'] = talib.ATR(data["High"], data["Low"], data["Close"], 10)
+    data['stoch_k'] = stock_df['stochrsi']
+    data['stoch_d'] = stock_df['stochrsi_3']
+    data['atr_old'] = talib.ATR(data["High"], data["Low"], data["Close"], 10)
+    data['atr'] = stock_df['atr_10']
+    
 
-    # SMA FAST over SLOW Crossover
+    # SMA FAST over SLow Crossover
     if(hasattr(data, 'ma100')):
         data['sma_test'] = np.where(data.ma100 > data.ma50, 1, 0)
     else:
@@ -1271,7 +1288,7 @@ def get_all_data():
         for row in dataset.itertuples():
             for i in range(len(interval)):
                 for j in range(len(timeDiff)):
-                    if(i == j and __name__ == '__main__'):
+                    if(i == j and __name__ == '__main__' and row[2] == 'SBIN.NS'):
                     # if(i == j and __name__ == '__main__'):
                     # if(i == j):
                         name = "thread-"+row[2]+"-"+interval[i]
