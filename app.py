@@ -1309,12 +1309,12 @@ def plot_Table():
     global res, res5m, res15m, res30m, res1h, res1d        
     app.layout = html.Div([
         html.Button('Fetch Data', id='submit-val', n_clicks=0),
-        html.Div([dbc.Table.from_dataframe(res, striped=True, bordered=True, hover=True, className = 'app-test'),
-        dbc.Table.from_dataframe(res5m, striped=True, bordered=True, hover=True, style={'border': 'solid'}),
-        dbc.Table.from_dataframe(res15m, striped=True, bordered=True, hover=True, style={'border': 'solid'}),
-        dbc.Table.from_dataframe(res30m, striped=True, bordered=True, hover=True, style={'border': 'solid'}),
-        dbc.Table.from_dataframe(res1h, striped=True, bordered=True, hover=True, style={'border': 'solid'}),
-        dbc.Table.from_dataframe(res1d, striped=True, bordered=True, hover=True, style={'border': 'solid'})
+        html.Div([dbc.Table.from_dataframe(res, striped=True, bordered=True, hover=True, style={'margin-right': '5px'}),
+        dbc.Table.from_dataframe(res5m, striped=True, bordered=True, hover=True, style={'border': '1px solid', 'margin-right': '5px'}),
+        dbc.Table.from_dataframe(res15m, striped=True, bordered=True, hover=True, style={'border': '1px solid', 'margin-right': '5px'}),
+        dbc.Table.from_dataframe(res30m, striped=True, bordered=True, hover=True, style={'border': '1px solid', 'margin-right': '5px'}),
+        dbc.Table.from_dataframe(res1h, striped=True, bordered=True, hover=True, style={'border': '1px solid', 'margin-right': '5px'}),
+        dbc.Table.from_dataframe(res1d, striped=True, bordered=True, hover=True, style={'border': '1px solid'})
             ], style={'display': '-webkit-box'})
         ])
     

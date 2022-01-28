@@ -15,3 +15,4 @@
 	 import yfinance as yf
 	 import numpy as np
 	 pip install tapy
+	 pip install https://github.com/matplotlib/mpl_finance/archive/master.zip

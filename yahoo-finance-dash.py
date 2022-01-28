@@ -22,10 +22,10 @@ import threading
 from dash import dash_table, html, Input, Output, dcc
 import time
 from tapy import Indicators
-import dash_bootstrap_components as dbc
+import sys
 
 
-res = pd.DataFrame(columns=['Company Name'])
+res = pd.DataFrame(columns=['Company Name', 'SYMBOL'])
 res5m = pd.DataFrame(columns=['MACD', 'RSI', 'STOCH', 'ST', 'Ali', 'b/s'])
 res15m = pd.DataFrame(columns=['MACD', 'RSI', 'STOCH', 'ST', 'Ali',  'b/s'])
 res30m = pd.DataFrame(columns=['MACD', 'RSI', 'STOCH', 'ST', 'Ali',  'b/s'])
@@ -83,7 +83,6 @@ def isBuySellSuperTrend(data):
     return "Nutral"
 
 def isBuySellAlligator(data):
-    
     lips = getLast(data, 'alligator_lips')
     teeth = getLast(data, 'alligator_teeth')
     jaw = getLast(data, 'alligator_jaw')
@@ -97,66 +96,8 @@ def isBuySellAlligator(data):
     
     return "Nutral"
 
-
 def getLast(data, column):
     return data[column].iat[-1]
-
-
-def plot_chart(data, n, ticker):
-
-    # Filter number of observations to plot
-    data = data.iloc[-n:]
-
-    # Create figure and set axes for subplots
-    fig = plt.figure()
-    fig.set_size_inches((20, 16))
-    ax_candle = fig.add_axes((0, 0.72, 1, 0.32))
-    ax_macd = fig.add_axes((0, 0.48, 1, 0.2), sharex=ax_candle)
-    ax_rsi = fig.add_axes((0, 0.24, 1, 0.2), sharex=ax_candle)
-    ax_vol = fig.add_axes((0, 0, 1, 0.2), sharex=ax_candle)
-
-    # Format x-axis ticks as dates
-    ax_candle.xaxis_date()
-
-    # Get nested list of date, open, high, low and close prices
-    ohlc = []
-    for date, row in data.iterrows():
-        openp, highp, lowp, closep = row[:4]
-        ohlc.append([date2num(date), openp, highp, lowp, closep])
-
-    # Plot candlestick chart
-    ax_candle.plot(data.index, data["ma5"], label="MA5")
-    ax_candle.plot(data.index, data["ma10"], label="MA10")
-    ax_candle.plot(data.index, data["ma50"], label="MA50")
-    ax_candle.plot(data.index, data["ma100"], label="MA100")
-    ax_candle.plot(data.index, data["ma200"], label="MA200")
-
-    candlestick_ohlc(ax_candle, ohlc, colorup="g", colordown="r", width=0.8)
-    ax_candle.legend()
-
-    # Plot MACD
-    ax_macd.plot(data.index, data["macd"], label="macd")
-    ax_macd.bar(data.index, data["macd_hist"] * 3, label="hist")
-    ax_macd.plot(data.index, data["macd_signal"], label="signal")
-    ax_macd.legend()
-
-    # Plot RSI
-    # Above 70% = overbought, below 30% = oversold
-    ax_rsi.set_ylabel("(%)")
-    ax_rsi.plot(data.index, [80] * len(data.index), label="overbought")
-    ax_rsi.plot(data.index, [20] * len(data.index), label="oversold")
-    ax_rsi.plot(data.index, data["rsi"], label="rsi")
-    ax_rsi.legend()
-
-    # Show volume in millions
-    ax_vol.bar(data.index, data["Volume"] / 1000000)
-    ax_vol.set_ylabel("(Million)")
-
-    # Save the chart as PNG
-    fig.savefig("C:\\Users\\HP\\Downloads\\Charts\\" +
-                ticker + ".png", bbox_inches="tight")
-
-    plt.show()
 
 def get_superTrend(data, period, multiplier):
     
@@ -252,12 +193,13 @@ def get_indicators(data):
     
     i = Indicators(data)
     
-    i.alligator(period_jaws=21, period_teeth=13, period_lips=8, shift_jaws=13, shift_teeth=8, shift_lips=5, column_name_jaws='alligator_jaw', column_name_teeth='alligator_teeth', column_name_lips='alligator_lips')
+    i.alligator(period_jaws=21, period_teeth=13, period_lips=8, column_name_jaws='alligator_jaw', column_name_teeth='alligator_teeth', column_name_lips='alligator_lips')
         
     i.sma()
     data = i.df
+    
     data = get_superTrend(data, 10, 3)
-
+    # print("data size : ", len(data))
     return data
 
 
@@ -288,10 +230,14 @@ def get_price_hist(ticker, period, interval):
         fro).date(), datetime.fromtimestamp(to).date()) + 1
     froDate = (today-relativedelta(days=int(da))).timestamp()
     # res5m = pd.DataFrame(columns=['MACD', 'RSI', 'STOCH', 'ST', 'BuyOrSell'])
+    # time.sleep(0.01)
+    # query_string = f'https://query1.finance.yahoo.com/v7/finance/download/{ticker}?period1={froDate}&period2={to}&interval={interval}&events=history&includeAdjustedClose=true'
     data = yf.download(tickers=ticker, start=str(datetime.fromtimestamp(
         froDate).date()), end=str(datetime.fromtimestamp(to).date()), interval=interval)
+    # data = pd.read_csv(query_string)
+    data['DateTime'] = data.index
     data.index = range(len(data))
-    # print("data :", data)
+    print("data size for ", ticker," for timeDiff ", period," : ", len(data))
     return data
 
 def do_processing(tickerName, ticker, period, interval, l):
@@ -302,6 +248,8 @@ def do_processing(tickerName, ticker, period, interval, l):
               period, " and with interval ", interval)
         data = get_price_hist(ticker, period, interval)
         indicator = get_indicators(data)
+        if(len(data) != len(indicator)):
+            print("data size not matching for ", ticker, " for interval ", interval)
         name = "C:\\Users\\HP\\Desktop\\Data\\" + \
             ticker + "-" + interval + ".csv"
         indicator.to_csv(name)
@@ -366,10 +314,11 @@ def do_processing(tickerName, ticker, period, interval, l):
             buyOrSell = 'Nutral' 
 
         if(setIntveral == '5m'):
-            res = res.append({'Company Name': name}, ignore_index=True)
-            res5m = res5m.append(
-                {'MACD': macd, 'RSI': rsi, 'STOCH': stoch, 'ST': superTrend, 'Ali': alligator, 'b/s': buyOrSell}, ignore_index=True)
+            res = res.append({'Company Name': name, 'SYMBOL': ticker}, ignore_index=True)
+            # res5m = res5m.append(
+                # {'MACD': macd, 'RSI': rsi, 'STOCH': stoch, 'ST': superTrend, 'Ali': alligator, 'b/s': buyOrSell}, ignore_index=True)
         elif(setIntveral == '15m'):
+            res = res.append({'Company Name': name, 'SYMBOL': ticker}, ignore_index=True)
             res15m = res15m.append(
                 {'MACD': macd, 'RSI': rsi, 'STOCH': stoch, 'ST': superTrend, 'Ali': alligator, 'b/s': buyOrSell}, ignore_index=True)
         elif(setIntveral == '30m'):
@@ -383,11 +332,13 @@ def do_processing(tickerName, ticker, period, interval, l):
                 {'MACD': macd, 'RSI': rsi, 'STOCH': stoch, 'ST': superTrend, 'Ali': alligator, 'b/s': buyOrSell}, ignore_index=True)
             
     finally:
+        print("done")
         l.release()
         
 app = dash.Dash(__name__)
 
 def draw_script_div():
+    global res
     return html.Div(
         dash_table.DataTable(
             id='table-name',
@@ -398,7 +349,7 @@ def draw_script_div():
                 'fontWeight': 'bold',
                 'textAlign': 'left'
                 }
-            ), style={'width': '10%', 'display': 'inline-block'})
+            ), style={'width': '15%', 'display': 'inline-block'})
 
 def draw_5m_div():
     return html.Div(
@@ -1283,7 +1234,7 @@ def draw_1d_div():
 
 def update_table():
     return [draw_script_div(),
-    draw_5m_div(),
+    # draw_5m_div(),
     draw_15m_div(),
     draw_30m_div(),
     draw_1h_div(),
@@ -1297,25 +1248,12 @@ def plot_dataTable():
             type="default",
             children=html.Div(id="parent", children = [
             draw_script_div(),
-            draw_5m_div(),
+            # draw_5m_div(),
             draw_15m_div(),
             draw_30m_div(),
             draw_1h_div(),
             draw_1d_div()])
         )
-        ])
-    
-def plot_Table():   
-    global res, res5m, res15m, res30m, res1h, res1d        
-    app.layout = html.Div([
-        html.Button('Fetch Data', id='submit-val', n_clicks=0),
-        html.Div([dbc.Table.from_dataframe(res, striped=True, bordered=True, hover=True, className = 'app-test'),
-        dbc.Table.from_dataframe(res5m, striped=True, bordered=True, hover=True, style={'border': 'solid'}),
-        dbc.Table.from_dataframe(res15m, striped=True, bordered=True, hover=True, style={'border': 'solid'}),
-        dbc.Table.from_dataframe(res30m, striped=True, bordered=True, hover=True, style={'border': 'solid'}),
-        dbc.Table.from_dataframe(res1h, striped=True, bordered=True, hover=True, style={'border': 'solid'}),
-        dbc.Table.from_dataframe(res1d, striped=True, bordered=True, hover=True, style={'border': 'solid'})
-            ], style={'display': '-webkit-box'})
         ])
     
 def get_all_data():
@@ -1324,16 +1262,20 @@ def get_all_data():
         print("before thread size : ", len(threads))
         dataset = pd.read_csv("C:\\Users\\HP\\Desktop\\Data.csv",
                                   usecols=['Company Name', 'Symbol'])
-        interval = np.array(["5m", "15m", "30m", "1h", "1d"])
-        timeDiff = np.array(["5d", "15d", "1mo", "2mo", "1y"])
+        # interval = np.array(["5m", "15m", "30m", "1h", "1d"])
+        # timeDiff = np.array(["5d", "15d", "1mo", "2mo", "1y"])
+        interval = np.array(["15m", "30m", "1h", "1d"])
+        timeDiff = np.array(["15d", "1mo", "2mo", "1y"])
         lock = Lock()
         
         for row in dataset.itertuples():
             for i in range(len(interval)):
                 for j in range(len(timeDiff)):
-                    if(i == j and __name__ == '__main__' and row[2] == 'SBIN.NS'):
+                    if(i == j and __name__ == '__main__'):
                     # if(i == j and __name__ == '__main__'):
+                    # if(i == j):
                         name = "thread-"+row[2]+"-"+interval[i]
+                        # do_processing(row[1], row[2], timeDiff[j], interval[i], lock)
                         # do_processing(row[1], row[2], timeDiff[j], interval[i], lock)
                         t = threading.Thread(name = name, target=do_processing, args=(row[1], row[2], timeDiff[j], interval[i], lock))
                         # proc = multiprocessing.Process(target=do_processing, args=(row[1], row[2], timeDiff[j], interval[i], lock))
@@ -1360,30 +1302,30 @@ def get_all_data():
 
 def load_data():
     get_all_data()
-    # plot_dataTable()
-    plot_Table()
+    plot_dataTable()
 
-load_data()
-# plot_dataTable()
+# load_data()
+plot_dataTable()
+# print(sys.version)
 
 
 # @app.callback(Output("loading-output-1", "children"), Input("submit-val", "n_clicks"))
 # def query_loader(n_clicks):
 #     return ""
 
-# @app.callback(Output("parent", "children"), Input("submit-val", "n_clicks"))
-# def query_df(n_clicks):
-#     print("n_clicks :", n_clicks)
-#     if(n_clicks > 0):
-#         global res, res5m, res15m, res30m, res1h, res1d
-#         res = res.iloc[0:0]
-#         res5m = res5m.iloc[0:0]
-#         res15m = res15m.iloc[0:0]
-#         res30m = res30m.iloc[0:0]
-#         res1h = res1h.iloc[0:0]
-#         res1d = res1d.iloc[0:0]
-#         get_all_data()
-#         return update_table()
+@app.callback(Output("parent", "children"), Input("submit-val", "n_clicks"))
+def query_df(n_clicks):
+    print("n_clicks :", n_clicks)
+    if(n_clicks > 0):
+        global res, res5m, res15m, res30m, res1h, res1d
+        res = res.iloc[0:0]
+        res5m = res5m.iloc[0:0]
+        res15m = res15m.iloc[0:0]
+        res30m = res30m.iloc[0:0]
+        res1h = res1h.iloc[0:0]
+        res1d = res1d.iloc[0:0]
+        get_all_data()
+        return update_table()
 
 if __name__ == '__main__':
     app.run_server(debug=True, port=8080)
