@@ -4,5 +4,5 @@ matplotlib==3.5.0
 yfinance==0.1.67
 dash==2.0.0
 numpy==1.21.2
-multiprocessing==0.70.12.2
+#multiprocessing==0.70.12.2
 tapy==1.91.1
