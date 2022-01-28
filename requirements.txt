@@ -1,0 +1,12 @@
+pandas
+talib
+matplotlib.pyplot
+yfinance
+dash
+numpy
+multiprocessing
+threading
+dash
+time
+tapy
+sys
