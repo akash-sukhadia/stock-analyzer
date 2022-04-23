@@ -24,6 +24,7 @@ from dash import dash_table, html, Input, Output, dcc
 import time
 from tapy import Indicators
 import sys
+import os.path
 
 
 res = pd.DataFrame(columns=['Company Name', 'SYMBOL'])
@@ -257,100 +258,25 @@ def get_price_hist(ticker, period, interval):
     print("data size for ", ticker," for timeDiff ", period," : ", len(data))
     return data
 
-def do_processing(tickerName, ticker, period, interval, l):
-    l.acquire()
+def do_processing(interval):
     try:
         global res, res5m, res15m, res30m, res1h, res1d
-        print("running job for ", ticker, " with timeDiff ",
-              period, " and with interval ", interval)
-        data = get_price_hist(ticker, period, interval)
-        indicator = get_indicators(data)
-        if(len(data) != len(indicator)):
-            print("data size not matching for ", ticker, " for interval ", interval)
-        name = "C:\\Users\\HP\\Desktop\\Data\\" + \
-            ticker + "-" + interval + ".csv"
-        indicator.to_csv(name)
-        name = tickerName
-        setIntveral = interval
-        buyCount = 0
-        sellCount = 0
-        nutralCount = 0
-        buyOrSell = ''
-        macd = isBuySellMACD(indicator)
-        rsi = isBuySellRSI(indicator)
-        stoch = isBuySellSTOCH(indicator)
-        superTrend = isBuySellSuperTrend(indicator)
-        alligator = isBuySellAlligator(indicator)
+        print("running job for interval ", interval)
         
-        if(alligator == 'Buy'):
-            buyCount = buyCount+1
-        elif(alligator == 'Nutral'):
-            nutralCount = nutralCount + 1
-        elif(alligator == 'Sell'):
-            sellCount = sellCount + 1
-            
-        if(superTrend == 'Buy'):
-            buyCount = buyCount+1
-        elif(superTrend == 'Nutral'):
-            nutralCount = nutralCount + 1
-        elif(superTrend == 'Sell'):
-            sellCount = sellCount + 1
-    
-        if(macd == 'Buy'):
-            buyCount = buyCount+1
-        elif(macd == 'Nutral'):
-            nutralCount = nutralCount + 1
-        elif(macd == 'Sell'):
-            sellCount = sellCount + 1
+        name = "C:\\Users\\HP\\Desktop\\Data\\" + \
+            "processed-" + interval + ".csv"
 
-        if(rsi == 'Buy'):
-            buyCount = buyCount+1
-        elif(rsi == 'Nutral'):
-            nutralCount = nutralCount + 1
-        elif(rsi == 'Sell'):
-            sellCount = sellCount + 1
-
-        if(stoch == 'Buy'):
-            buyCount = buyCount+1
-        elif(stoch == 'Nutral'):
-            nutralCount = nutralCount + 1
-        elif(stoch == 'Sell'):
-            sellCount = sellCount + 1
-
-        if(buyCount > nutralCount and buyCount > sellCount):
-            buyOrSell = 'Buy'
-        elif(nutralCount > buyCount and nutralCount > sellCount):
-            buyOrSell = 'Nutral'
-        elif(sellCount > buyCount and sellCount > nutralCount):
-            buyOrSell = 'Sell'
-        elif(buyCount == nutralCount and buyCount > sellCount):
-            buyOrSell = 'Buy'
-        elif(sellCount == nutralCount and sellCount > buyCount):
-            buyOrSell = 'Sell' 
-        elif(sellCount == buyCount):
-            buyOrSell = 'Nutral' 
-
-        if(setIntveral == '5m'):
-            res = res.append({'Company Name': name, 'SYMBOL': ticker}, ignore_index=True)
-            # res5m = res5m.append(
-                # {'MACD': macd, 'RSI': rsi, 'STOCH': stoch, 'ST': superTrend, 'Ali': alligator, 'b/s': buyOrSell}, ignore_index=True)
-        elif(setIntveral == '15m'):
-            res = res.append({'Company Name': name, 'SYMBOL': ticker}, ignore_index=True)
-            res15m = res15m.append(
-                {'MACD': macd, 'RSI': rsi, 'STOCH': stoch, 'ST': superTrend, 'Ali': alligator, 'b/s': buyOrSell}, ignore_index=True)
-        elif(setIntveral == '30m'):
-            res30m = res30m.append(
-                {'MACD': macd, 'RSI': rsi, 'STOCH': stoch, 'ST': superTrend, 'Ali': alligator, 'b/s': buyOrSell}, ignore_index=True)
-        elif(setIntveral == '1h'):
-            res1h = res1h.append(
-                {'MACD': macd, 'RSI': rsi, 'STOCH': stoch, 'ST': superTrend, 'Ali': alligator, 'b/s': buyOrSell}, ignore_index=True)
-        elif(setIntveral == '1d'):
-            res1d = res1d.append(
-                {'MACD': macd, 'RSI': rsi, 'STOCH': stoch, 'ST': superTrend, 'Ali': alligator, 'b/s': buyOrSell}, ignore_index=True)
+        if(interval == '15m'):
+            res15m = res15m.append(pd.read_csv(name, usecols=['MACD', 'RSI', 'STOCH', 'ST', 'Ali', 'b/s']), ignore_index=True)
+        elif(interval == '30m'):
+            res30m = res30m.append(pd.read_csv(name, usecols=['MACD', 'RSI', 'STOCH', 'ST', 'Ali', 'b/s']), ignore_index=True)
+        elif(interval == '1h'):
+           res1h = res1h.append(pd.read_csv(name, usecols=['MACD', 'RSI', 'STOCH', 'ST', 'Ali', 'b/s']), ignore_index=True)
+        elif(interval == '1d'):
+            res1d = res1d.append(pd.read_csv(name, usecols=['MACD', 'RSI', 'STOCH', 'ST', 'Ali', 'b/s']), ignore_index=True)
             
     finally:
         print("done")
-        l.release()
         
 app = dash.Dash(__name__)
 
@@ -1274,54 +1200,47 @@ def plot_dataTable():
         ])
     
 def get_all_data():
-    global threads
     try:
-        print("before thread size : ", len(threads))
+        global res, res5m, res15m, res30m, res1h, res1d
+        print("before thread size :")
         dataset = pd.read_csv("C:\\Users\\HP\\Desktop\\Data.csv",
                                   usecols=['Company Name', 'Symbol'])
         # interval = np.array(["5m", "15m", "30m", "1h", "1d"])
         # timeDiff = np.array(["5d", "15d", "1mo", "2mo", "1y"])
         interval = np.array(["15m", "30m", "1h", "1d"])
-        timeDiff = np.array(["15d", "1mo", "2mo", "1y"])
-        lock = Lock()
         
-        for row in dataset.itertuples():
+        fileName = "C:\\Users\\HP\\Desktop\\Data\\tickers.csv"
+        if(os.path.exists(fileName)):
+            res = res.append(pd.read_csv(fileName, usecols=['Company Name', 'SYMBOL']), ignore_index=True)
             for i in range(len(interval)):
-                for j in range(len(timeDiff)):
-                    if(i == j and __name__ == '__main__' and row[2] == 'SBIN.NS'):
-                    # if(i == j and __name__ == '__main__'):
-                    # if(i == j):
-                        name = "thread-"+row[2]+"-"+interval[i]
-                        # do_processing(row[1], row[2], timeDiff[j], interval[i], lock)
-                        # do_processing(row[1], row[2], timeDiff[j], interval[i], lock)
-                        t = threading.Thread(name = name, target=do_processing, args=(row[1], row[2], timeDiff[j], interval[i], lock))
-                        # proc = multiprocessing.Process(target=do_processing, args=(row[1], row[2], timeDiff[j], interval[i], lock))
-                        threads.append(t)
-                        # t.start()
-
-
-        for index, thread in enumerate(threads):
-            print("started")
-            thread.start()
-            
-                        
-        for index, thread in enumerate(threads):
-            print("joined")
-            thread.join()
-            
-        for t in threads:
-            if not t.is_alive():
-                # get results from thread
-                t.handled = True
+                try:
+                    name = "C:\\Users\\HP\\Desktop\\Data\\" + \
+                        "processed-" + interval[i] + ".csv"
+                    if(os.path.exists(name)):
+                        if(interval[i] == '15m'):
+                            res15m = res15m.append(pd.read_csv(name, usecols=['MACD', 'RSI', 'STOCH', 'ST', 'Ali', 'b/s']), ignore_index=True)
+                        elif(interval[i] == '30m'):
+                            res30m = res30m.append(pd.read_csv(name, usecols=['MACD', 'RSI', 'STOCH', 'ST', 'Ali', 'b/s']), ignore_index=True)
+                        elif(interval[i] == '1h'):
+                           res1h = res1h.append(pd.read_csv(name, usecols=['MACD', 'RSI', 'STOCH', 'ST', 'Ali', 'b/s']), ignore_index=True)
+                        elif(interval[i] == '1d'):
+                            res1d = res1d.append(pd.read_csv(name, usecols=['MACD', 'RSI', 'STOCH', 'ST', 'Ali', 'b/s']), ignore_index=True)
+                    else:
+                        continue
+                except ValueError:
+                    print("Oops!  That was no valid number.  Try again...")
+                    continue
+        else:
+            print("ticker file not found")
+                
     finally:
-        threads = [t for t in threads if not t.handled] 
-        print("after thread size : ", len(threads))
+        print("after thread size : ")
 
 def load_data():
-    #get_all_data()
+    get_all_data()
     plot_dataTable()
 
-# load_data()
+#load_data()
 plot_dataTable()
 # print(sys.version)
 
@@ -1341,7 +1260,7 @@ def query_df(n_clicks):
         res30m = res30m.iloc[0:0]
         res1h = res1h.iloc[0:0]
         res1d = res1d.iloc[0:0]
-        #get_all_data()
+        get_all_data()
         return update_table()
 
 if __name__ == '__main__':
